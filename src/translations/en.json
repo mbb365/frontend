@@ -430,11 +430,11 @@
           "last_quarter": "Last quarter",
           "waning_crescent": "Waning crescent"
         },
-        "illumination": "Illumination",
+        "phase_illumination": "{phase} · {illumination}",
         "moonrise": "Moonrise",
         "moonset": "Moonset",
         "next_full_moon": "Next full moon",
-        "in_days": "{count, plural,\n  one {In # day}\n  other {In # days}\n}"
+        "days": "{count, plural,\n  one {# day}\n  other {# days}\n}"
       }
     },
     "card_features": {
