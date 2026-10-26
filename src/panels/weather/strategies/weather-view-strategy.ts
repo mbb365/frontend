@@ -4,7 +4,6 @@ import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import type { WeatherFrontendSystemData } from "../../../data/frontend";
 import { fetchFrontendSystemData } from "../../../data/frontend";
 import type { LovelaceCardConfig } from "../../../data/lovelace/config/card";
-import type { LovelaceSectionRawConfig } from "../../../data/lovelace/config/section";
 import type { LovelaceViewConfig } from "../../../data/lovelace/config/view";
 import {
   findMoonEntity,
@@ -20,7 +19,6 @@ import {
 import type { HomeAssistant } from "../../../types";
 import type {
   WeatherAirQualityCardConfig,
-  WeatherDailyCardConfig,
   WeatherHourlyCardConfig,
   WeatherMetric,
   WeatherMetricCardConfig,
@@ -68,6 +66,8 @@ export class WeatherViewStrategy extends ReactiveElement {
     const hasHourly = !!getForecastSource(hass, entities, "hourly");
     const hasDaily = !!getForecastSource(hass, entities, "daily");
 
+    // HomeCore concept: HomeCore layout. Now with its days and the hours across
+    // the top, then data point tiles in three columns.
     const metric = (
       name: WeatherMetric,
       extra: Partial<WeatherMetricCardConfig> = {}
@@ -75,7 +75,7 @@ export class WeatherViewStrategy extends ReactiveElement {
       type: "weather-metric",
       metric: name,
       entities,
-      grid_options: { columns: 6 },
+      grid_options: { columns: "full" },
       ...extra,
     });
 
@@ -92,16 +92,7 @@ export class WeatherViewStrategy extends ReactiveElement {
       } satisfies WeatherHourlyCardConfig);
     }
 
-    const forecast: LovelaceCardConfig[] = [];
-    if (hasDaily) {
-      forecast.push({
-        type: "weather-daily",
-        entities,
-      } satisfies WeatherDailyCardConfig);
-    }
-
-    // Sun, moon and wind
-    const sky: LovelaceCardConfig[] = [
+    const points: LovelaceCardConfig[] = [
       { type: "weather-sun", grid_options: { columns: "full" } },
       {
         type: "weather-moon",
@@ -110,33 +101,31 @@ export class WeatherViewStrategy extends ReactiveElement {
       } satisfies WeatherMoonCardConfig,
     ];
     if (hasValue("wind_speed")) {
-      sky.push({
+      points.push({
         type: "weather-wind",
         entities,
         grid_options: { columns: "full" },
       } satisfies WeatherPageCardConfig);
     }
-
-    // Small tiles, two per row
-    const details: LovelaceCardConfig[] = [];
-    if (hasDaily && hasValue("temperature")) {
-      details.push(metric("compared_to_average"));
-    }
     if (hasValue("uv_index")) {
-      details.push(metric("uv_index"));
+      points.push(metric("uv_index"));
+    }
+    // Two squares wide, so it starts the last row
+    if (hasDaily && hasValue("temperature")) {
+      points.push(metric("compared_to_average"));
     }
     if (hasValue("humidity")) {
-      details.push(metric("humidity"));
+      points.push(metric("humidity"));
     }
     if (hasValue("pressure")) {
-      details.push(metric("pressure"));
+      points.push(metric("pressure"));
     }
     const rainGauge = getRainGauge(hass, settings);
     if (rainGauge) {
-      details.push(metric("precipitation", { entity: rainGauge }));
+      points.push(metric("precipitation", { entity: rainGauge }));
     }
     if (hasValue("visibility")) {
-      details.push(metric("visibility"));
+      points.push(metric("visibility"));
     }
 
     const airQualityEntities = getAirQualityEntities(
@@ -146,7 +135,7 @@ export class WeatherViewStrategy extends ReactiveElement {
     );
     const pollenEntities = getPollenEntities(hass, categories, settings);
     if (airQualityEntities.length || pollenEntities.length) {
-      details.push({
+      points.push({
         type: "weather-air-quality",
         air_quality_entities: airQualityEntities,
         pollen_entities: pollenEntities,
@@ -154,18 +143,13 @@ export class WeatherViewStrategy extends ReactiveElement {
       } satisfies WeatherAirQualityCardConfig);
     }
 
-    // Three columns on wide screens; they stack on smaller ones.
-    const sections: LovelaceSectionRawConfig[] = [
-      { type: "grid", column_span: 3, cards: overview },
-      ...[forecast, sky, details]
-        .filter((cards) => cards.length)
-        .map((cards) => ({ type: "grid", cards })),
-    ];
+    // Bento at the Figma sizes: the weather card and the hours side by side,
+    // then the data point tiles.
+    const cards = [...overview, ...points];
 
     return {
-      type: "sections",
-      max_columns: 3,
-      sections,
+      type: "panel",
+      cards: [{ type: "weather-bento", cards }],
     };
   }
 }

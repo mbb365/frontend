@@ -106,6 +106,7 @@ const LAZY_LOAD_TYPES = {
   "statistics-graph": () => import("../cards/hui-statistics-graph-card"),
   statistic: () => import("../cards/hui-statistic-card"),
   "vertical-stack": () => import("../cards/hui-vertical-stack-card"),
+  "weather-bento": () => import("../cards/weather/hui-weather-bento-card"),
   "weather-current": () => import("../cards/weather/hui-weather-current-card"),
   "weather-hourly": () => import("../cards/weather/hui-weather-hourly-card"),
   "weather-daily": () => import("../cards/weather/hui-weather-daily-card"),

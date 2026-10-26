@@ -29,6 +29,10 @@ import type { Lovelace } from "../lovelace/types";
 import "../lovelace/views/hui-view";
 import "../lovelace/views/hui-view-background";
 import "../lovelace/views/hui-view-container";
+import {
+  homecoreTokens,
+  loadHomecoreFonts,
+} from "../lovelace/cards/weather/homecore";
 import "./components/weather-page-editor";
 
 const WEATHER_LOVELACE_VIEW_CONFIG: LovelaceStrategyViewConfig = {
@@ -57,8 +61,30 @@ class PanelWeather extends LitElement {
 
   private _loadConfigPromise?: Promise<void>;
 
+  private _homecoreDark?: boolean;
+
+  public connectedCallback(): void {
+    super.connectedCallback();
+    loadHomecoreFonts();
+  }
+
+  // HomeCore concept: HomeCore colours, following Home Assistant's dark mode
+  private _applyHomecore() {
+    const dark = this.hass.themes?.darkMode ?? true;
+    if (dark === this._homecoreDark) {
+      return;
+    }
+    this._homecoreDark = dark;
+    Object.entries(homecoreTokens(dark)).forEach(([name, value]) =>
+      this.style.setProperty(name, value)
+    );
+  }
+
   public willUpdate(changedProps: PropertyValues<this>) {
     super.willUpdate(changedProps);
+    if (changedProps.has("hass")) {
+      this._applyHomecore();
+    }
     if (!this.hasUpdated) {
       this._setup();
       return;

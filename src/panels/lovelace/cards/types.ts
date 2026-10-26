@@ -715,6 +715,7 @@ export interface WeatherDailyCardConfig extends WeatherPageCardConfig {
 export interface WeatherMoonCardConfig extends LovelaceCardConfig {
   // The moon sensor, when the moon integration is set up
   entity?: string;
+  no_background?: boolean;
 }
 
 export type WeatherMetric =
