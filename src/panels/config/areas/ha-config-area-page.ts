@@ -2,6 +2,7 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
+  mdiImageEdit,
   mdiImagePlus,
   mdiPalette,
   mdiPencil,
@@ -402,21 +403,21 @@ class HaConfigAreaPage extends LitElement {
             )}
           </div>
           <div class="area-actions">
-            ${
-              area.picture
-                ? nothing
-                : html`<ha-button
-                    appearance="filled"
-                    .entry=${area}
-                    @click=${this._showSettings}
-                  >
-                    <ha-svg-icon
-                      slot="start"
-                      .path=${mdiImagePlus}
-                    ></ha-svg-icon>
-                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
-                  </ha-button>`
-            }
+            <ha-button
+              appearance="filled"
+              .entry=${area}
+              @click=${this._showSettings}
+            >
+              <ha-svg-icon
+                slot="start"
+                .path=${area.picture ? mdiImageEdit : mdiImagePlus}
+              ></ha-svg-icon>
+              ${this.hass.localize(
+                area.picture
+                  ? "ui.panel.config.areas.edit_picture"
+                  : "ui.panel.config.areas.add_picture"
+              )}
+            </ha-button>
             <ha-button
               appearance="filled"
               variant="brand"
