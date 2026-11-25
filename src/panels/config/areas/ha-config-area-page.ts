@@ -406,7 +406,7 @@ class HaConfigAreaPage extends LitElement {
             ${
               area.picture
                 ? html`<ha-button
-                    appearance="filled"
+                    appearance="plain"
                     @click=${this._clearPicture}
                   >
                     <ha-svg-icon
