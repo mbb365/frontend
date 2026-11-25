@@ -2,7 +2,6 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
-  mdiImagePlus,
   mdiImageRemove,
   mdiPalette,
   mdiPencil,
@@ -373,17 +372,35 @@ class HaConfigAreaPage extends LitElement {
             : nothing
         }
         <div class="card-content">
-          <h1 class="area-name">
+          <div class="area-title">
+            <h1 class="area-name">
+              ${
+                area.icon
+                  ? html`<ha-icon
+                      class="area-icon"
+                      .icon=${area.icon}
+                    ></ha-icon>`
+                  : html`<ha-svg-icon
+                      class="area-icon"
+                      .path=${mdiTextureBox}
+                    ></ha-svg-icon>`
+              }
+              <span>${area.name}</span>
+            </h1>
             ${
-              area.icon
-                ? html`<ha-icon class="area-icon" .icon=${area.icon}></ha-icon>`
-                : html`<ha-svg-icon
-                    class="area-icon"
-                    .path=${mdiTextureBox}
-                  ></ha-svg-icon>`
+              area.picture
+                ? nothing
+                : html`<ha-button
+                    class="add-picture"
+                    appearance="plain"
+                    size="s"
+                    .entry=${area}
+                    @click=${this._showSettings}
+                  >
+                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
+                  </ha-button>`
             }
-            <span>${area.name}</span>
-          </h1>
+          </div>
           <div class="area-links">
             ${NAVIGATION_ACTIONS.filter(
               (action) => quickLinkCounts[action.countKey]
@@ -415,17 +432,7 @@ class HaConfigAreaPage extends LitElement {
                     ></ha-svg-icon>
                     ${this.hass.localize("ui.panel.config.areas.clear_picture")}
                   </ha-button>`
-                : html`<ha-button
-                    appearance="filled"
-                    .entry=${area}
-                    @click=${this._showSettings}
-                  >
-                    <ha-svg-icon
-                      slot="start"
-                      .path=${mdiImagePlus}
-                    ></ha-svg-icon>
-                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
-                  </ha-button>`
+                : nothing
             }
             <ha-button
               class="add-to"
@@ -1129,7 +1136,18 @@ class HaConfigAreaPage extends LitElement {
           object-fit: cover;
           background-color: var(--secondary-background-color);
         }
+        .area-title {
+          display: flex;
+          align-items: center;
+          gap: var(--ha-space-2);
+        }
+        .area-title .add-picture {
+          flex: none;
+          margin-inline-start: auto;
+        }
         .area-name {
+          flex: 1;
+          min-width: 0;
           display: flex;
           align-items: center;
           gap: var(--ha-space-2);
