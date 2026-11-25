@@ -3559,6 +3559,10 @@
           "add_picture": "Add a picture",
           "upload_picture": "Upload new picture",
           "clear_picture": "[%key:ui::components::picture-upload::clear_picture%]",
+          "clear_picture_confirm": {
+            "title": "Clear picture?",
+            "text": "The picture will be removed from {name}."
+          },
           "assigned_to_area": "Assigned to this area",
           "targeting_area": "Targeting this area",
           "related_lists": {

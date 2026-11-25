@@ -1149,6 +1149,22 @@ class HaConfigAreaPage extends LitElement {
   }
 
   private async _clearPicture() {
+    const area = this.hass.areas[this.areaId];
+    const confirmed = await showConfirmationDialog(this, {
+      title: this.hass.localize(
+        "ui.panel.config.areas.clear_picture_confirm.title"
+      ),
+      text: this.hass.localize(
+        "ui.panel.config.areas.clear_picture_confirm.text",
+        { name: area?.name ?? "" }
+      ),
+      dismissText: this.hass.localize("ui.common.cancel"),
+      confirmText: this.hass.localize("ui.panel.config.areas.clear_picture"),
+      destructive: true,
+    });
+    if (!confirmed) {
+      return;
+    }
     try {
       await updateAreaRegistryEntry(this.hass.callWS, this.areaId, {
         picture: null,
