@@ -3556,6 +3556,7 @@
             "scenes": "[%key:ui::panel::config::common::quick_links::scenes%]",
             "scripts": "[%key:ui::panel::config::common::quick_links::scripts%]"
           },
+          "add_picture": "Add a picture",
           "assigned_to_area": "Assigned to this area",
           "targeting_area": "Targeting this area",
           "related_lists": {

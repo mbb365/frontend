@@ -2,6 +2,7 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
+  mdiImagePlus,
   mdiPalette,
   mdiPencil,
   mdiPlus,
@@ -32,6 +33,7 @@ import { groupBy } from "../../../common/util/group-by";
 import { afterNextRender } from "../../../common/util/render-status";
 import { createColumnsController } from "../../../common/util/responsive-columns";
 import "../../../components/ha-button";
+import "../../../components/chips/ha-assist-chip";
 import "../../../components/ha-card";
 import "../../../components/ha-dropdown";
 import type { HaDropdownSelectEvent } from "../../../components/ha-dropdown";
@@ -364,42 +366,57 @@ class HaConfigAreaPage extends LitElement {
 
     const header = html`
       <ha-card outlined class="area-header">
-        <div class="card-content area-header-content">
-          ${
-            area.picture
-              ? html`<div class="area-media">
-                  <img alt=${area.name} src=${area.picture} />
-                </div>`
-              : nothing
-          }
-          <div class="area-info">
-            <h1 class="area-name">
-              ${
-                area.icon
-                  ? html`<ha-icon
-                      class="area-icon"
-                      .icon=${area.icon}
-                    ></ha-icon>`
-                  : html`<ha-svg-icon
-                      class="area-icon"
-                      .path=${mdiTextureBox}
-                    ></ha-svg-icon>`
-              }
-              <span>${area.name}</span>
-            </h1>
-            <div class="area-summary">
-              ${this.hass.localize(
-                "ui.panel.config.areas.quick_links.devices",
-                { count: quickLinkCounts.devices }
-              )}
-              ·
-              ${this.hass.localize(
-                "ui.panel.config.areas.quick_links.entities",
-                { count: quickLinkCounts.entities }
-              )}
-            </div>
+        ${
+          area.picture
+            ? html`<img class="area-picture" alt="" src=${area.picture} />`
+            : nothing
+        }
+        <div class="card-content">
+          <h1 class="area-name">
+            ${
+              area.icon
+                ? html`<ha-icon class="area-icon" .icon=${area.icon}></ha-icon>`
+                : html`<ha-svg-icon
+                    class="area-icon"
+                    .path=${mdiTextureBox}
+                  ></ha-svg-icon>`
+            }
+            <span>${area.name}</span>
+          </h1>
+          <div class="area-links">
+            ${NAVIGATION_ACTIONS.filter(
+              (action) => quickLinkCounts[action.countKey]
+            ).map(
+              (action) => html`
+                <ha-assist-chip
+                  .value=${action.value}
+                  .label=${this.hass.localize(
+                    `ui.panel.config.areas.quick_links.${action.countKey}`,
+                    { count: quickLinkCounts[action.countKey] }
+                  )}
+                  @click=${this._handleQuickLink}
+                >
+                  <ha-svg-icon slot="icon" .path=${action.icon}></ha-svg-icon>
+                </ha-assist-chip>
+              `
+            )}
           </div>
           <div class="area-actions">
+            ${
+              area.picture
+                ? nothing
+                : html`<ha-button
+                    appearance="filled"
+                    .entry=${area}
+                    @click=${this._showSettings}
+                  >
+                    <ha-svg-icon
+                      slot="start"
+                      .path=${mdiImagePlus}
+                    ></ha-svg-icon>
+                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
+                  </ha-button>`
+            }
             <ha-button
               appearance="filled"
               variant="brand"
@@ -414,6 +431,7 @@ class HaConfigAreaPage extends LitElement {
     `;
 
     const infoColumn = html`
+      ${header}
       <ha-card
         outlined
         .header=${this.hass.localize("ui.panel.config.devices.caption")}
@@ -729,7 +747,7 @@ class HaConfigAreaPage extends LitElement {
         .hass=${this.hass}
         .narrow=${this.narrow}
         back-path="/config/areas/dashboard"
-        .header=${this.hass.localize("ui.panel.config.areas.caption")}
+        .header=${area.name}
       >
         <ha-icon-button
           slot="toolbar-icon"
@@ -773,13 +791,10 @@ class HaConfigAreaPage extends LitElement {
           </ha-dropdown-item>
         </ha-dropdown>
 
-        <div class="content">
-          ${header}
-          <div class="container" ${this._columnsController.target()}>
-            ${columnContents.map(
-              (contents) => html`<div class="column">${contents}</div>`
-            )}
-          </div>
+        <div class="container" ${this._columnsController.target()}>
+          ${columnContents.map(
+            (contents) => html`<div class="column">${contents}</div>`
+          )}
         </div>
       </hass-subpage>
     `;
@@ -987,14 +1002,27 @@ class HaConfigAreaPage extends LitElement {
     return this._allEntities(memberships);
   }
 
+  private _handleQuickLink(
+    ev: HASSDomCurrentTargetEvent<HTMLElement & { value: string }>
+  ) {
+    this._navigateTo(ev.currentTarget.value);
+  }
+
+  private _navigateTo(value: string): boolean {
+    const navAction = NAVIGATION_ACTIONS.find((a) => a.value === value);
+    if (!navAction) {
+      return false;
+    }
+    navigate(
+      `${navAction.path}?historyBack=1&area=${this.areaId}${navAction.params ?? ""}`
+    );
+    return true;
+  }
+
   private _handleMenuAction(ev: HaDropdownSelectEvent) {
     const action = ev.detail?.item?.value;
 
-    const navAction = NAVIGATION_ACTIONS.find((a) => a.value === action);
-    if (navAction) {
-      navigate(
-        `${navAction.path}?historyBack=1&area=${this.areaId}${navAction.params ?? ""}`
-      );
+    if (this._navigateTo(action)) {
       return;
     }
 
@@ -1064,56 +1092,32 @@ class HaConfigAreaPage extends LitElement {
           display: block;
           height: 100%;
         }
-        /* Spaced like the Marketplace repository page: 16px below the toolbar
-           and one card gap between the header card and the columns. */
-        .content {
-          display: flex;
-          flex-direction: column;
-          gap: var(--ha-space-4);
-          margin: auto;
-          padding: var(--ha-space-4) var(--ha-content-gutter);
-          max-width: var(--ha-content-width-wide);
-        }
         .container {
           display: flex;
           flex-wrap: wrap;
           gap: var(--ha-space-4);
+          margin: auto;
+          max-width: var(--ha-content-width-wide);
+          padding: var(--ha-space-4) var(--ha-content-gutter);
         }
-
-        /* The actions move to their own row when the name would get too
-           narrow, for example with long translated labels. */
-        .area-header-content {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: var(--ha-space-4);
-        }
-        /* The picture is only shown when the area has one. The area icon
-           always sits next to the name, so it shows exactly once. */
-        .area-media {
-          flex: none;
-          width: 160px;
-          aspect-ratio: 16 / 10;
-          border-radius: var(--ha-border-radius-lg);
+        /* The title card is the top of the first column, so every column
+           starts with a card. Name, links and actions stay together. */
+        .area-header {
           overflow: hidden;
         }
-        .area-media img {
+        .area-picture {
           display: block;
           width: 100%;
-          height: 100%;
+          aspect-ratio: 16 / 9;
           object-fit: cover;
           background-color: var(--secondary-background-color);
-        }
-        .area-info {
-          flex: 1 1 200px;
-          min-width: 0;
         }
         .area-name {
           display: flex;
           align-items: center;
           gap: var(--ha-space-2);
           margin: 0;
-          font-size: var(--ha-font-size-2xl);
+          font-size: var(--ha-font-size-xl);
           font-weight: var(--ha-font-weight-normal);
           line-height: var(--ha-line-height-condensed);
           overflow-wrap: anywhere;
@@ -1121,26 +1125,20 @@ class HaConfigAreaPage extends LitElement {
         .area-icon {
           flex: none;
         }
-        .area-summary {
-          margin-top: var(--ha-space-1);
-          color: var(--secondary-text-color);
-          font-size: var(--ha-font-size-m);
-        }
-        .area-actions {
-          flex: none;
+        .area-links {
           display: flex;
           flex-wrap: wrap;
-          justify-content: flex-end;
           gap: var(--ha-space-2);
-          margin-inline-start: auto;
+          margin-top: var(--ha-space-3);
         }
-
-        :host([narrow]) .area-media {
-          width: 96px;
+        .area-links:empty {
+          display: none;
         }
-        :host([narrow]) .area-actions {
-          flex-basis: 100%;
-          justify-content: flex-start;
+        .area-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--ha-space-2);
+          margin-top: var(--ha-space-4);
         }
         .column {
           box-sizing: border-box;
