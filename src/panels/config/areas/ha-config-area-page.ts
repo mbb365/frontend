@@ -2,7 +2,6 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
-  mdiImageRemove,
   mdiPalette,
   mdiPencil,
   mdiPlus,
@@ -420,20 +419,6 @@ class HaConfigAreaPage extends LitElement {
             )}
           </div>
           <div class="area-actions">
-            ${
-              area.picture
-                ? html`<ha-button
-                    appearance="plain"
-                    @click=${this._clearPicture}
-                  >
-                    <ha-svg-icon
-                      slot="start"
-                      .path=${mdiImageRemove}
-                    ></ha-svg-icon>
-                    ${this.hass.localize("ui.panel.config.areas.clear_picture")}
-                  </ha-button>`
-                : nothing
-            }
             <ha-button
               class="add-to"
               appearance="filled"
@@ -1049,12 +1034,6 @@ class HaConfigAreaPage extends LitElement {
         this._deleteConfirm();
         break;
     }
-  }
-
-  private async _clearPicture() {
-    await updateAreaRegistryEntry(this.hass.callWS, this.areaId, {
-      picture: null,
-    });
   }
 
   private _showSettings(
