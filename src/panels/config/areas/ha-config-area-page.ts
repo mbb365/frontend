@@ -2,6 +2,9 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
+  mdiImageEdit,
+  mdiImagePlus,
+  mdiImageRemove,
   mdiPalette,
   mdiPencil,
   mdiPlus,
@@ -16,7 +19,7 @@ import { startOfYesterday } from "date-fns";
 import type { HassEntity } from "home-assistant-js-websocket/dist/types";
 import type { CSSResultGroup, PropertyValues } from "lit";
 import { LitElement, css, html, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators";
+import { customElement, property, query, state } from "lit/decorators";
 import memoizeOne from "memoize-one";
 import { isComponentLoaded } from "../../../common/config/is_component_loaded";
 import { consume } from "../../../common/decorators/consume";
@@ -74,7 +77,15 @@ import type { ScriptEntity } from "../../../data/script";
 import type { RelatedResult } from "../../../data/search";
 import { findRelated } from "../../../data/search";
 import { filterAddToSceneEntityIds } from "../../../dialogs/add-to/add-to";
-import { showConfirmationDialog } from "../../../dialogs/generic/show-dialog-box";
+import {
+  showAlertDialog,
+  showConfirmationDialog,
+} from "../../../dialogs/generic/show-dialog-box";
+import { showImageCropperDialog } from "../../../dialogs/image-cropper-dialog/show-image-cropper-dialog";
+import {
+  createImage,
+  generateImageThumbnailUrl,
+} from "../../../data/image_upload";
 import { showMoreInfoDialog } from "../../../dialogs/more-info/show-ha-more-info-dialog";
 import "../../../layouts/hass-error-screen";
 import "../../../layouts/hass-subpage";
@@ -157,6 +168,10 @@ class HaConfigAreaPage extends LitElement {
   @property({ type: Boolean, reflect: true }) public narrow = false;
 
   @property({ attribute: "is-wide", type: Boolean }) public isWide = false;
+
+  @state() private _uploadingPicture = false;
+
+  @query(".file-input") private _fileInput?: HTMLInputElement;
 
   @state()
   @consume({ context: fullEntitiesContext, subscribe: true })
@@ -365,41 +380,82 @@ class HaConfigAreaPage extends LitElement {
 
     const header = html`
       <ha-card outlined class="area-header">
-        ${
-          area.picture
-            ? html`<img class="area-picture" alt="" src=${area.picture} />`
-            : nothing
-        }
+        <div class="area-media">
+          ${
+            area.picture
+              ? html`<img alt="" src=${area.picture} />
+                  <div class="picture-actions">
+                    <ha-button
+                      appearance="filled"
+                      variant="neutral"
+                      size="s"
+                      aria-label=${this.hass.localize(
+                        "ui.panel.config.areas.upload_picture"
+                      )}
+                      .disabled=${this._uploadingPicture}
+                      @click=${this._pickPicture}
+                    >
+                      <ha-svg-icon
+                        slot="start"
+                        .path=${mdiImageEdit}
+                      ></ha-svg-icon>
+                      <span class="button-label">
+                        ${this.hass.localize(
+                          "ui.panel.config.areas.upload_picture"
+                        )}
+                      </span>
+                    </ha-button>
+                    <ha-button
+                      appearance="filled"
+                      variant="neutral"
+                      size="s"
+                      aria-label=${this.hass.localize(
+                        "ui.panel.config.areas.clear_picture"
+                      )}
+                      .disabled=${this._uploadingPicture}
+                      @click=${this._clearPicture}
+                    >
+                      <ha-svg-icon
+                        slot="start"
+                        .path=${mdiImageRemove}
+                      ></ha-svg-icon>
+                      <span class="button-label">
+                        ${this.hass.localize(
+                          "ui.panel.config.areas.clear_picture"
+                        )}
+                      </span>
+                    </ha-button>
+                  </div>`
+              : html`<ha-button
+                  appearance="plain"
+                  .loading=${this._uploadingPicture}
+                  @click=${this._pickPicture}
+                >
+                  <ha-svg-icon slot="start" .path=${mdiImagePlus}></ha-svg-icon>
+                  ${this.hass.localize("ui.panel.config.areas.add_picture")}
+                </ha-button>`
+          }
+          <input
+            type="file"
+            class="file-input"
+            accept="image/png, image/jpeg, image/gif"
+            tabindex="-1"
+            aria-hidden="true"
+            @change=${this._picturePicked}
+          />
+        </div>
         <div class="card-content">
-          <div class="area-title">
-            <h1 class="area-name">
-              ${
-                area.icon
-                  ? html`<ha-icon
-                      class="area-icon"
-                      .icon=${area.icon}
-                    ></ha-icon>`
-                  : html`<ha-svg-icon
-                      class="area-icon"
-                      .path=${mdiTextureBox}
-                    ></ha-svg-icon>`
-              }
-              <span>${area.name}</span>
-            </h1>
+          <h1 class="area-name">
             ${
-              area.picture
-                ? nothing
-                : html`<ha-button
-                    class="add-picture"
-                    appearance="plain"
-                    size="s"
-                    .entry=${area}
-                    @click=${this._showSettings}
-                  >
-                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
-                  </ha-button>`
+              area.icon
+                ? html`<ha-icon class="area-icon" .icon=${area.icon}></ha-icon>`
+                : html`<ha-svg-icon
+                    class="area-icon"
+                    .path=${mdiTextureBox}
+                  ></ha-svg-icon>`
             }
-          </div>
+            <span>${area.name}</span>
+          </h1>
           <div class="area-links">
             ${NAVIGATION_ACTIONS.filter(
               (action) => quickLinkCounts[action.countKey]
@@ -1036,6 +1092,64 @@ class HaConfigAreaPage extends LitElement {
     }
   }
 
+  private _pickPicture() {
+    this._fileInput?.click();
+  }
+
+  private _picturePicked(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) {
+      return;
+    }
+    if (!["image/png", "image/jpeg", "image/gif"].includes(file.type)) {
+      showAlertDialog(this, {
+        text: this.hass.localize(
+          "ui.components.picture-upload.unsupported_format"
+        ),
+      });
+      return;
+    }
+    showImageCropperDialog(this, {
+      file,
+      options: { round: false, aspectRatio: 16 / 9 },
+      croppedCallback: (croppedFile) => this._uploadPicture(croppedFile),
+    });
+  }
+
+  private async _uploadPicture(file: File) {
+    this._uploadingPicture = true;
+    try {
+      const media = await createImage(
+        this.hass.fetchWithAuth,
+        this.hass.localize,
+        file
+      );
+      await updateAreaRegistryEntry(this.hass.callWS, this.areaId, {
+        picture: generateImageThumbnailUrl(media.id, 512),
+      });
+    } catch (err) {
+      showAlertDialog(this, {
+        text: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      this._uploadingPicture = false;
+    }
+  }
+
+  private async _clearPicture() {
+    try {
+      await updateAreaRegistryEntry(this.hass.callWS, this.areaId, {
+        picture: null,
+      });
+    } catch (err) {
+      showAlertDialog(this, {
+        text: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   private _showSettings(
     ev: HASSDomCurrentTargetEvent<
       HTMLButtonElement & { entry: AreaRegistryEntry }
@@ -1108,25 +1222,56 @@ class HaConfigAreaPage extends LitElement {
         .area-header {
           overflow: hidden;
         }
-        .area-picture {
-          display: block;
-          width: 100%;
+        .area-media {
+          position: relative;
           aspect-ratio: 16 / 9;
-          object-fit: cover;
-          background-color: var(--secondary-background-color);
-        }
-        .area-title {
           display: flex;
           align-items: center;
-          gap: var(--ha-space-2);
+          justify-content: center;
+          background-color: var(--secondary-background-color);
         }
-        .area-title .add-picture {
-          flex: none;
-          margin-inline-start: auto;
+        .area-media img {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .file-input {
+          display: none;
+        }
+        /* Picture actions show on hover or keyboard focus. Touch screens
+           have no hover, so they always show there, as icons only. */
+        .picture-actions {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: var(--ha-space-2);
+          padding: var(--ha-space-2);
+          background-color: rgb(0 0 0 / 40%);
+          opacity: 0;
+          transition: opacity 150ms ease-in-out;
+        }
+        .area-media:hover .picture-actions,
+        .picture-actions:focus-within {
+          opacity: 1;
+        }
+        @media (hover: none) {
+          .picture-actions {
+            opacity: 1;
+            inset: auto;
+            top: 0;
+            inset-inline-end: 0;
+            background-color: transparent;
+          }
+          .picture-actions .button-label {
+            display: none;
+          }
         }
         .area-name {
-          flex: 1;
-          min-width: 0;
           display: flex;
           align-items: center;
           gap: var(--ha-space-2);

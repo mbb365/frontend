@@ -3557,6 +3557,8 @@
             "scripts": "[%key:ui::panel::config::common::quick_links::scripts%]"
           },
           "add_picture": "Add a picture",
+          "upload_picture": "Upload new picture",
+          "clear_picture": "[%key:ui::components::picture-upload::clear_picture%]",
           "assigned_to_area": "Assigned to this area",
           "targeting_area": "Targeting this area",
           "related_lists": {
