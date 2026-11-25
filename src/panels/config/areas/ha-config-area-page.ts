@@ -425,17 +425,17 @@ class HaConfigAreaPage extends LitElement {
                     </span>
                   </ha-button>
                 </div>
-                <input
-                  type="file"
-                  class="file-input"
-                  accept="image/png, image/jpeg, image/gif"
-                  tabindex="-1"
-                  aria-hidden="true"
-                  @change=${this._picturePicked}
-                />
               </div>`
             : nothing
         }
+        <input
+          type="file"
+          class="file-input"
+          accept="image/png, image/jpeg, image/gif"
+          tabindex="-1"
+          aria-hidden="true"
+          @change=${this._picturePicked}
+        />
         <div class="card-content">
           <div class="area-title">
             <h1 class="area-name">
@@ -459,8 +459,8 @@ class HaConfigAreaPage extends LitElement {
                     class="add-picture"
                     appearance="plain"
                     size="s"
-                    .entry=${area}
-                    @click=${this._showSettings}
+                    .loading=${this._uploadingPicture}
+                    @click=${this._pickPicture}
                   >
                     ${this.hass.localize("ui.panel.config.areas.add_picture")}
                   </ha-button>`
