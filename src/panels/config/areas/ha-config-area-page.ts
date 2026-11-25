@@ -2,8 +2,8 @@ import {
   mdiDelete,
   mdiDevices,
   mdiDotsVertical,
-  mdiImageEdit,
   mdiImagePlus,
+  mdiImageRemove,
   mdiPalette,
   mdiPencil,
   mdiPlus,
@@ -403,22 +403,32 @@ class HaConfigAreaPage extends LitElement {
             )}
           </div>
           <div class="area-actions">
+            ${
+              area.picture
+                ? html`<ha-button
+                    appearance="filled"
+                    @click=${this._clearPicture}
+                  >
+                    <ha-svg-icon
+                      slot="start"
+                      .path=${mdiImageRemove}
+                    ></ha-svg-icon>
+                    ${this.hass.localize("ui.panel.config.areas.clear_picture")}
+                  </ha-button>`
+                : html`<ha-button
+                    appearance="filled"
+                    .entry=${area}
+                    @click=${this._showSettings}
+                  >
+                    <ha-svg-icon
+                      slot="start"
+                      .path=${mdiImagePlus}
+                    ></ha-svg-icon>
+                    ${this.hass.localize("ui.panel.config.areas.add_picture")}
+                  </ha-button>`
+            }
             <ha-button
-              appearance="filled"
-              .entry=${area}
-              @click=${this._showSettings}
-            >
-              <ha-svg-icon
-                slot="start"
-                .path=${area.picture ? mdiImageEdit : mdiImagePlus}
-              ></ha-svg-icon>
-              ${this.hass.localize(
-                area.picture
-                  ? "ui.panel.config.areas.edit_picture"
-                  : "ui.panel.config.areas.add_picture"
-              )}
-            </ha-button>
-            <ha-button
+              class="add-to"
               appearance="filled"
               variant="brand"
               @click=${this._showAddToDialog}
@@ -1034,6 +1044,12 @@ class HaConfigAreaPage extends LitElement {
     }
   }
 
+  private async _clearPicture() {
+    await updateAreaRegistryEntry(this.hass.callWS, this.areaId, {
+      picture: null,
+    });
+  }
+
   private _showSettings(
     ev: HASSDomCurrentTargetEvent<
       HTMLButtonElement & { entry: AreaRegistryEntry }
@@ -1140,6 +1156,9 @@ class HaConfigAreaPage extends LitElement {
           flex-wrap: wrap;
           gap: var(--ha-space-2);
           margin-top: var(--ha-space-4);
+        }
+        .area-actions .add-to {
+          margin-inline-start: auto;
         }
         .column {
           box-sizing: border-box;
